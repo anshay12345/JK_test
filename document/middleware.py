@@ -65,6 +65,7 @@ class LoggingMiddleware(MiddlewareMixin):
             logger.info(f"Request Body: {body}")
         except Exception as e:
             logger.warning(f"Failed to log request body: {e}")
+            
 
     def process_response(self, request, response):
         """ 
