@@ -5,3 +5,6 @@ class UploadedDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model=UploadedDocument
         fields=['id', 'file_name', 'file_path', 'date_uploaded']
+        extra_kwargs={
+            'file_name': {'required': False},
+        }

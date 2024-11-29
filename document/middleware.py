@@ -2,6 +2,8 @@ import logging
 import traceback
 from django.http import JsonResponse
 from django.utils.timezone import now
+from django.utils.deprecation import MiddlewareMixin
+
 
 # Setup logging to a file
 logger = logging.getLogger('django')
@@ -41,29 +43,66 @@ class ExceptionHandlingMiddleware:
         return response
 
 
-class LoggingMiddleware:
-    """
-    Middleware for logging requests and responses to a file for auditing and debugging purposes.
-    """
 
-    def __init__(self, get_response):
-        """
-        Initialize the middleware with the next layer of the middleware or view to process requests.
-        """
-        self.get_response=get_response
+class LoggingMiddleware(MiddlewareMixin):
+    """Middleware to log all requests and responses."""
 
-    
-    def __call__(self, request):
+    def process_request(self, request):
         """
-        Log details of the incoming request and outgoing response.
+        Logs the incoming request data.
         """
-        logger.info(
-            f"Request - Method: {request.method}, Path: {request.path}, Time: {now()}, "
-            f"Body: {request.body.decode('utf-8') if request.body else 'No Body'}"
-        )
+        try:
+            content_type = request.content_type
+            if "application/json" in content_type or "text" in content_type:
+                # Decode and log only text-based body
+                body = request.body.decode("utf-8") if request.body else "No Body"
+            else:
+                # Skip binary data
+                body = "[Binary Data - Not Logged]"
 
-        response=self.get_response(request)
-        logger.info(
-            f"Response - Status: {response.status_code}, Content: {response.content.decode('utf-8')}"
-        )
+            logger.info(f"Request Method: {request.method}")
+            logger.info(f"Request Path: {request.path}")
+            logger.info(f"Request Body: {body}")
+        except Exception as e:
+            logger.warning(f"Failed to log request body: {e}")
+
+    def process_response(self, request, response):
+        """ 
+        Logs the outgoing response data.
+        """
+        try:
+            # Log response status code
+            logger.info(f"Response Status Code: {response.status_code}")
+
+            # Check for the existence of response content
+            if hasattr(response, "content"):
+                # Handle multipart form data separately (skip logging large binary data)
+                if request.content_type.startswith('multipart/form-data'):
+                    body = 'Multipart form data; not logged due to potential large size or binary data'
+                else:
+                    # Safely decode the body with 'replace' for invalid characters
+                    try:
+                        body = request.body.decode('utf-8', errors='replace')
+                    except Exception as e:
+                        body = f"Error decoding body: {str(e)}"
+                    logger.info(f"Response Body: {body}")
+
+                # Check if response contains 'data' attribute (for DRF responses)
+                if hasattr(response, 'data'):
+                    response_data = response.data
+                    if isinstance(response_data, dict):
+                        for key, item in response_data.items():
+                            # Log each key-value pair in the response data
+                            logger.info(f"{key}: {item}")
+                    else:
+                        logger.info(f"Response data is not a dictionary: {response_data}")
+
+            else:
+                logger.error("Response has no content")
+
+            logger.info("-" * 100)
+
+        except Exception as e:
+            logger.warning(f"Failed to log response content: {e}")
+
         return response

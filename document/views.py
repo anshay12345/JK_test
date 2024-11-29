@@ -18,12 +18,7 @@ class FileUploadView(APIView):
         if not file_obj:
             return Response({'error':'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
         
-        serializer=UploadedDocumentSerializer(
-            data={
-                "file_name": request.FILES['file_path'].name,
-                "file_path": request.FILES['file_path']
-            }
-        )
+        serializer=UploadedDocumentSerializer(data=request.data)
 
         if serializer.is_valid():
             serializer.save()
