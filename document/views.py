@@ -1,5 +1,5 @@
 from django.shortcuts import render
-
+import os
 # Create your views here.
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -7,6 +7,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import UploadedDocument
 from .serializers import UploadedDocumentSerializer
+
+#SECRET_KEY = os.getenv('TEST_KEY')
+#print(SECRET_KEY)
 
 
 class FileUploadView(APIView):
