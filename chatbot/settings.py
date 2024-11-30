@@ -118,6 +118,8 @@ LOGGING = {
     },
 }
 
+ALLOWED_HOSTS = ['100.27.64.195']
+
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
