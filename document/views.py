@@ -5,12 +5,11 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
-from .models import UploadedDocument
+from .models import UploadedDocument, Embeddings
 from .serializers import UploadedDocumentSerializer
-
-#SECRET_KEY = os.getenv('TEST_KEY')
-#print(SECRET_KEY)
-
+from langchain_community.document_loaders import PyMuPDFLoader
+from .llm_utils import PDFProcessor
+from asgiref.sync import sync_to_async
 
 class FileUploadView(APIView):
     parser_classes=[MultiPartParser, FormParser]
@@ -24,8 +23,21 @@ class FileUploadView(APIView):
         serializer=UploadedDocumentSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.save()
+            uploaded_document=serializer.save()
+            file_obj = UploadedDocument.objects.get(file_name=uploaded_document.file_name)
+            pdf_processor = PDFProcessor(uploaded_document.file_path.path)
+            documents=pdf_processor.read_and_chunk_pdf()
+            for document in documents: 
+                embedding=pdf_processor.get_embedding(document)   
+                Embeddings.objects.create(
+                    embedding=embedding, 
+                    uploaded_document=file_obj, 
+                    content=document
+                )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+

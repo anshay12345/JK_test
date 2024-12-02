@@ -92,12 +92,11 @@ WSGI_APPLICATION = 'chatbot.wsgi.application'
 #     }
 # }
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('NAME'), 
-        'USER': os.getenv('USER'),
+        'USER': os.getenv('PG_USER'),
         'PASSWORD': os.getenv('PASSWORD'),
         'HOST': os.getenv('HOST'), 
         'PORT': os.getenv('PORT'),
@@ -130,7 +129,7 @@ LOGGING = {
     },
 }
 
-ALLOWED_HOSTS = ['100.27.64.195']
+ALLOWED_HOSTS = ['100.27.64.195', '10.200.4.65', 'localhost', '127.0.0.1']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

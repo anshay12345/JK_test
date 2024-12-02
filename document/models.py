@@ -1,5 +1,6 @@
 from django.db import models
 import os
+from pgvector.django import VectorField
 # Create your models here.
 
 class UploadedDocument(models.Model):
@@ -18,3 +19,21 @@ class UploadedDocument(models.Model):
 
     def __str__(self):
         return self.file_name
+
+
+class Embeddings(models.Model):
+    """
+    Model for storing embeddings of "UploadedDocument" instance.
+    embedding: Stores the embeddings of the chunks of the content of document.
+    uploaded_document: Many-to-one relationship, where multiple embeddings can be associated with a single uploaded document.
+    embedding_creation_date: Datetime of embedding creation. 
+    """
+
+    embedding = VectorField(dimensions=1536)
+    uploaded_document = models.ForeignKey(UploadedDocument, on_delete=models.CASCADE, related_name='embeddings')
+    embedding_creation_date = models.DateTimeField(auto_now_add=True)
+    content = models.TextField()
+    
+    def __str__(self):
+        return f"Embeddings for {self.uploaded_document.file_name}"
+    
