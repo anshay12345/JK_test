@@ -1,10 +1,7 @@
 # Project Name
 ## Easy Installation Steps
 1. **Clone the code from the Git repository:**
-   
-bash
    git clone https://github.com/anshay12345/JK_test.git
-   
 2. **Setup .env variables from .env_example.**
 3. **Install the dependencies:**
    
