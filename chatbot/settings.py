@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'document'
+    'document',
+    'adrf'
 ]
 
 MIDDLEWARE = [
@@ -79,7 +80,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'chatbot.wsgi.application'
+#WSGI_APPLICATION = 'chatbot.wsgi.application'
 
 
 # Database
@@ -179,3 +180,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'document.utils.custom_exception_handler'
 }
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
