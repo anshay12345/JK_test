@@ -1,7 +1,12 @@
-# Project Name
+# AI Powered RAG Chatbot
+
 ## Easy Installation Steps
+
 1. **Clone the code from the Git repository:**
+
+   ```bash
    git clone https://github.com/anshay12345/JK_test.git
+   
 2. **Setup .env variables from .env_example.**
 3. **Install the dependencies:**
    
@@ -63,6 +68,8 @@ python
     embedding_creation_date = models.DateTimeField(auto_now_add=True)
     
   - uploaded_document: Takes the reference from the UploadedDocument.
+  - Note: For fast retrieval of the embedding make sure to index the embedding column which will increase the search speed. Follow https://github.com/pgvector/pgvector for details.
+
 ### 2. Views
 - Views are asynchronous. As of now, DRF does not have much compatibility with async/await, hence a third-party library "adrf: Async Django REST framework" is used. A better approach would be to create a custom package for async/await to be used in production to avoid any end-time issues of package depreciation.
 - **FileUploadView:**
@@ -81,3 +88,17 @@ python
 ### 5. Serializers
 - Used for validating and serializing the data.
 
+### 6. End Points:
+- POST: http://HOST:8000/api/question-answer/ 
+   - For getting the answers
+   - {
+         "pdf_name": "PDF Name",
+         "question": "Question to be asked"
+     }
+
+- POST: http://HOST:8000/api/upload/            
+   - For uploading and ingesting the document
+   - {
+         "file_path": PDF Document
+     }
+```
