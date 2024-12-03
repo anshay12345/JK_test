@@ -4,6 +4,12 @@ from pgvector.django import VectorField
 # Create your models here.
 
 class UploadedDocument(models.Model):
+    """
+    Model for storing details of the file.
+    file_name: Name of the file
+    file_path: Local Path of the file(Store it somewhere in cloud for production)
+    date_uploaded: Date for the file upload
+    """
     file_name=models.CharField(max_length=255, blank=True)
     file_path=models.FileField(upload_to='document_storage/')
     date_uploaded=models.DateTimeField(auto_now_add=True)

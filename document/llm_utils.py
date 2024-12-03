@@ -6,10 +6,6 @@ import os
 load_dotenv()
 
 
-
-import os
-import asyncio
-
 class PDFProcessor:
     def __init__(self):
         self.engine = os.getenv('TEXT_EMBEDDING_ENGINE')

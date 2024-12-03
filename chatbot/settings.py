@@ -104,7 +104,7 @@ DATABASES = {
     }
 }
 
-
+# Configuration for the logs of the application
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -130,7 +130,9 @@ LOGGING = {
     },
 }
 
-ALLOWED_HOSTS = ['100.27.64.195', '10.200.4.65', 'localhost', '127.0.0.1']
+
+# Add the host here for running the application
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

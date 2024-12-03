@@ -45,7 +45,7 @@ class FileUploadView(APIView):
         serializer = UploadedDocumentSerializer(data=request.data)
 
         if serializer.is_valid():
-            # Save the uploaded document asynchronously
+            # Save the uploaded document asynchronously, this will save the data into the model table
             uploaded_document = await sync_to_async(serializer.save)()
 
             # Retrieve the file object asynchronously
