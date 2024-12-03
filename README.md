@@ -101,4 +101,8 @@ python
    - {
          "file_path": PDF Document
      }
+
+### 7. Unit Test:
+- Provided unit test for both the views in tests/test_view.py file.
+
 ```
