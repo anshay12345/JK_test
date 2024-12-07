@@ -101,6 +101,10 @@ DATABASES = {
         'PASSWORD': os.getenv('PASSWORD'),
         'HOST': os.getenv('HOST'), 
         'PORT': os.getenv('PORT'),
+        'TEST': {
+            'NAME': 'test_stag_ai_jira_automation',
+            'MIRROR': 'default'
+        },
     }
 }
 
@@ -184,3 +188,5 @@ REST_FRAMEWORK = {
 }
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+
