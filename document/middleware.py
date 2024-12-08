@@ -53,6 +53,7 @@ class LoggingMiddleware(MiddlewareMixin):
         """
         try:
             content_type = request.content_type
+
             if "application/json" in content_type or "text" in content_type:
                 # Decode and log only text-based body
                 body = request.body.decode("utf-8") if request.body else "No Body"

@@ -106,5 +106,3 @@ class AsyncQuestionAnsweringView(APIView):
         # Generate an answer using the relevant chunks
         answer = pdf_processor.generate_answer(question, relevant_chunks)
         return Response({'answer': answer}, status=status.HTTP_200_OK)
-
-
