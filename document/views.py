@@ -30,79 +30,114 @@ class FileUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     async def post(self, request):
-        file_obj = request.FILES.get('file_path')
-        if not file_obj:
-            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        """
+        Handle POST request for accepting PDF file, creating and storing embeddings along with file details.
+        Note: ***This post method is asynchronous for future reference where any call to llm function might become asynchronous.***
+        """
+        try:
+            file_obj = request.FILES.get('file_path')
+            if not file_obj:
+                return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Extract the filename from the file object
-        file_name = file_obj.name
+            # Extract the filename from the file object
+            file_name = file_obj.name
 
-        # Check if a document with the same name already exists
-        existing_document = await sync_to_async(UploadedDocument.objects.filter(file_name=file_name).exists)()
-        if existing_document:
-            return Response({'error': 'A document with the same name already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            # Check if a document with the same name already exists
+            existing_document = await sync_to_async(UploadedDocument.objects.filter(file_name=file_name).exists)()
+            if existing_document:
+                return Response({'error': 'A document with the same name already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = UploadedDocumentSerializer(data=request.data)
 
-        serializer = UploadedDocumentSerializer(data=request.data)
+            if serializer.is_valid():
+                # Save the uploaded document asynchronously, this will save the data into the model table
+                uploaded_document = await sync_to_async(serializer.save)()
 
-        if serializer.is_valid():
-            # Save the uploaded document asynchronously, this will save the data into the model table
-            uploaded_document = await sync_to_async(serializer.save)()
+                # Retrieve the file object asynchronously
+                file_obj = await sync_to_async(UploadedDocument.objects.get)(file_name=uploaded_document.file_name)
 
-            # Retrieve the file object asynchronously
-            file_obj = await sync_to_async(UploadedDocument.objects.get)(file_name=uploaded_document.file_name)
+                pdf_processor = PDFProcessor()
+                documents = pdf_processor.read_and_chunk_pdf(uploaded_document.file_path.path)
 
-            pdf_processor = PDFProcessor()
-            documents = pdf_processor.read_and_chunk_pdf(uploaded_document.file_path.path)
+                for document in documents:
+                    # Get embedding asynchronously if possible
+                    embedding = pdf_processor.get_embedding(document)
 
-            for document in documents:
-                # Get embedding asynchronously if possible
-                embedding = pdf_processor.get_embedding(document)
+                    # Create embedding record asynchronously
+                    await sync_to_async(Embeddings.objects.create)(
+                        embedding=embedding,
+                        uploaded_document=file_obj,
+                        content=document
+                    )
+                return Response(serializer.data,status=status.HTTP_201_CREATED)
 
-                # Create embedding record asynchronously
-                await sync_to_async(Embeddings.objects.create)(
-                    embedding=embedding,
-                    uploaded_document=file_obj,
-                    content=document
-                )
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'An unexpected error occurred. Please try again later.',
+                    'status_code': status.HTTP_500_INTERNAL_SERVER_ERROR
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class AsyncQuestionAnsweringView(APIView):
     """
     Asynchronous classbased view for handling the incoming request for question asked, and answers the question from the PDF using RAG.
     post: Accepts the PDF name and question asked.
     """
+    
     async def post(self, request):
         """
         Handle POST request to answer a question based on the content of a specified PDF.
+        Note: ***This post method is asynchronous for future reference where any call to llm function might become asynchronous.***
         """
-        pdf_name = request.data.get('pdf_name')
-        question = request.data.get('question')
-        pdf_processor = PDFProcessor()
 
-        if not pdf_name or not question:
-            return Response({'error': 'PDF name and question are required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Retrieve the UploadedDocument instance asynchronously
-        uploaded_document = await sync_to_async(get_object_or_404)(UploadedDocument, file_name=pdf_name)
-        
-        # Generate embeddings for the question
-        question_embedding = pdf_processor.get_embedding(question)
+        try:
+            pdf_name = request.data.get('pdf_name')
+            question = request.data.get('question')
+            pdf_processor = PDFProcessor()
 
-        # Retrieve and annotate embeddings with cosine similarity
-        document_embeddings = await sync_to_async(list)(
-            Embeddings.objects.filter(uploaded_document=uploaded_document).annotate(
-                distance=CosineDistance("embedding", question_embedding)
-            ).order_by('distance')
-        )
+            if not pdf_name or not question:
+                return Response({'error': 'PDF name and question are required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Retrieve the UploadedDocument instance asynchronously
+            uploaded_document = await sync_to_async(get_object_or_404)(UploadedDocument, file_name=pdf_name)
+            
+            # Generate embeddings for the question
+            question_embedding = pdf_processor.get_embedding(question)
 
-        # Extract the most relevant chunks based on the annotated distance
-        relevant_chunks = [embedding.content for embedding in document_embeddings[:3]]  # Top 3 relevant chunks
+            # Retrieve and annotate embeddings with cosine similarity
+            document_embeddings = await sync_to_async(list)(
+                Embeddings.objects.filter(uploaded_document=uploaded_document).annotate(
+                    distance=CosineDistance("embedding", question_embedding)
+                ).order_by('distance')
+            )
 
-        # Generate an answer using the relevant chunks
-        answer = pdf_processor.generate_answer(question, relevant_chunks)
-        return Response({'answer': answer}, status=status.HTTP_200_OK)
+            # Extract the most relevant chunks based on the annotated distance
+            relevant_chunks = [embedding.content for embedding in document_embeddings[:3]]  # Top 3 relevant chunks
+
+            # Generate an answer using the relevant chunks
+            answer = pdf_processor.generate_answer(question, relevant_chunks)
+
+            return Response(
+                {   
+                    'answer': answer,
+                    'status_code': status.HTTP_200_OK
+                }, 
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'An unexpected error occurred. Please try again later.',
+                    'status_code': status.HTTP_500_INTERNAL_SERVER_ERROR
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )    
+
+
+
