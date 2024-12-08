@@ -19,6 +19,14 @@ from asgiref.sync import sync_to_async
 import asyncio
 from adrf.views import APIView
 from pgvector.django import CosineDistance
+import logging
+
+# Configure logging
+logging.basicConfig(
+    filename='logs/input_output.log',  # Log file path
+    level=logging.INFO,  # Log level
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -41,12 +49,13 @@ class FileUploadView(APIView):
 
             # Extract the filename from the file object
             file_name = file_obj.name
-
+            logging.info(f"File received: {file_name}")
             # Check if a document with the same name already exists
             existing_document = await sync_to_async(UploadedDocument.objects.filter(file_name=file_name).exists)()
             if existing_document:
+                logging.warning(f"Document with the name {file_name} already exists")
                 return Response({'error': 'A document with the same name already exists'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
             serializer = UploadedDocumentSerializer(data=request.data)
 
             if serializer.is_valid():
@@ -62,7 +71,8 @@ class FileUploadView(APIView):
                 for document in documents:
                     # Get embedding asynchronously if possible
                     embedding = pdf_processor.get_embedding(document)
-
+                    logging.info(f"Embeddings for {file_name} created...")
+                    
                     # Create embedding record asynchronously
                     await sync_to_async(Embeddings.objects.create)(
                         embedding=embedding,
@@ -75,6 +85,7 @@ class FileUploadView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
+            logging.error(f'An error occurred: {str(e)}', exc_info=True)
             return Response(
                 {
                     'error': 'An unexpected error occurred. Please try again later.',
@@ -85,27 +96,29 @@ class FileUploadView(APIView):
 
 class AsyncQuestionAnsweringView(APIView):
     """
-    Asynchronous classbased view for handling the incoming request for question asked, and answers the question from the PDF using RAG.
+    Asynchronous class-based view for handling the incoming request for question asked, and answers the question from the PDF using RAG.
     post: Accepts the PDF name and question asked.
     """
-    
+
     async def post(self, request):
         """
         Handle POST request to answer a question based on the content of a specified PDF.
         Note: ***This post method is asynchronous for future reference where any call to llm function might become asynchronous.***
         """
-
         try:
             pdf_name = request.data.get('pdf_name')
             question = request.data.get('question')
             pdf_processor = PDFProcessor()
 
             if not pdf_name or not question:
+                logging.warning('PDF name or question not provided in the request.')
                 return Response({'error': 'PDF name and question are required'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            logging.info(f'Received request for PDF: {pdf_name} with question: {question}')
+
             # Retrieve the UploadedDocument instance asynchronously
             uploaded_document = await sync_to_async(get_object_or_404)(UploadedDocument, file_name=pdf_name)
-            
+
             # Generate embeddings for the question
             question_embedding = pdf_processor.get_embedding(question)
 
@@ -122,22 +135,25 @@ class AsyncQuestionAnsweringView(APIView):
             # Generate an answer using the relevant chunks
             answer = pdf_processor.generate_answer(question, relevant_chunks)
 
+            logging.info(f'Generated answer for question: {question}')
+
             return Response(
-                {   
+                {
                     'answer': answer,
                     'status_code': status.HTTP_200_OK
-                }, 
+                },
                 status=status.HTTP_200_OK
             )
 
         except Exception as e:
+            logging.error(f'An error occurred: {str(e)}', exc_info=True)
             return Response(
                 {
                     'error': 'An unexpected error occurred. Please try again later.',
                     'status_code': status.HTTP_500_INTERNAL_SERVER_ERROR
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )    
+            )
 
 
 
